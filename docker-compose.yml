@@ -1,0 +1,98 @@
+# =============================================================================
+# Docker Compose Configuration for Local Development
+# =============================================================================
+# This file is used for local development and testing
+# It builds and runs both frontend and backend services
+#
+# Usage:
+#   docker-compose up --build        # Build and start all services
+#   docker-compose up -d             # Start in detached mode
+#   docker-compose down              # Stop and remove containers
+#   docker-compose logs -f           # View logs
+# =============================================================================
+
+version: '3.8'
+
+services:
+  # =============================================================================
+  # Backend Service - FastAPI Application
+  # =============================================================================
+  backend:
+    # Build context: directory containing Dockerfile
+    build:
+      context: ./Backend
+      dockerfile: Dockerfile
+    
+    # Container name for easy identification
+    container_name: backend-dev
+    
+    # Port mapping: host:container
+    ports:
+      - "8000:8000"
+    
+    # Restart policy: always restart unless explicitly stopped
+    restart: unless-stopped
+    
+    # Environment variables for development
+    environment:
+      - PYTHONUNBUFFERED=1
+      - ENVIRONMENT=development
+    
+    # Health check configuration
+    # Checks if the API is responding correctly
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/hello"]
+      interval: 30s      # Check every 30 seconds
+      timeout: 10s       # Timeout after 10 seconds
+      retries: 3         # Retry 3 times before marking as unhealthy
+      start_period: 40s  # Wait 40 seconds before starting health checks
+    
+    # Volume mounts for development (optional - enables hot reload)
+    # Uncomment to enable live code reloading:
+    # volumes:
+    #   - ./Backend:/app
+    #   - /app/__pycache__  # Exclude cache directory
+
+  # =============================================================================
+  # Frontend Service - Vue.js Application
+  # =============================================================================
+  frontend:
+    # Build context: directory containing Dockerfile
+    build:
+      context: ./Frontend
+      dockerfile: Dockerfile
+      # Build arguments (optional)
+      args:
+        - VUE_APP_API_URL=http://localhost:8000
+    
+    # Container name for easy identification
+    container_name: frontend-dev
+    
+    # Port mapping: host:container
+    ports:
+      - "80:80"
+    
+    # Dependencies: start backend before frontend
+    depends_on:
+      backend:
+        condition: service_healthy  # Wait for backend to be healthy
+    
+    # Restart policy
+    restart: unless-stopped
+    
+    # Health check configuration
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost/"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+
+# =============================================================================
+# Networks
+# =============================================================================
+# Services can communicate using service names as hostnames
+# Default network is created automatically
+networks:
+  default:
+    name: demo-network

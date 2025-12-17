@@ -1,0 +1,98 @@
+# =============================================================================
+# Docker Compose Configuration for Production Deployment
+# =============================================================================
+# This file is used for production deployment on DigitalOcean Droplet
+# It includes the backend service and Caddy reverse proxy
+#
+# Usage:
+#   docker-compose -f docker-compose.prod.yml up -d
+#
+# Environment Variables Required:
+#   - DO_REGISTRY_TOKEN: DigitalOcean Container Registry token
+#   - DO_REGISTRY_NAME: Container registry name
+# =============================================================================
+
+version: '3.8'
+
+services:
+  # Backend API Service
+  backend:
+    # Use image from DigitalOcean Container Registry
+    image: ${DO_REGISTRY:-registry.digitalocean.com}/${DO_REGISTRY_NAME}/backend:latest
+    
+    # Container name for easy identification
+    container_name: backend-api
+    
+    # Restart policy: always restart unless explicitly stopped
+    restart: unless-stopped
+    
+    # Port mapping: no longer need to expose to host if using Caddy in same network
+    # We remove explicit port mapping to host for security, or keep 127.0.0.1
+    # ports:
+    #   - "127.0.0.1:8000:8000"
+    
+    # Environment variables
+    environment:
+      - PYTHONUNBUFFERED=1
+      - ENVIRONMENT=production
+      # Application-specific environment variables
+      - FRONTEND_URL=${FRONTEND_URL:-https://ui.tech00000.online}
+      - SPACES_CDN_URL=${SPACES_CDN_URL:-}
+      # - DATABASE_URL=${DATABASE_URL:-}
+      # - SECRET_KEY=${SECRET_KEY:-}
+    
+    # Health check configuration
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/api/hello"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+    
+    # Resource limits
+    deploy:
+      resources:
+        limits:
+          cpus: '1.0'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+    
+    # Logging configuration
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    
+    networks:
+      - app-network
+
+  # Caddy Reverse Proxy Service
+  caddy:
+    image: caddy:alpine
+    container_name: caddy-proxy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - app-network
+    depends_on:
+      - backend
+
+# Define volumes for Caddy data persistence
+volumes:
+  caddy_data:
+  caddy_config:
+
+# Define custom network for service isolation
+networks:
+  app-network:
+    driver: bridge
+    name: app-network

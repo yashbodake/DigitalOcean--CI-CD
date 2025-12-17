@@ -1,0 +1,32 @@
+# Caddyfile for DigitalOcean Droplet
+
+{
+    # Global options
+}
+
+# The block for your domain
+api.tech00000.online {
+    # Encode responses with gzip
+    encode gzip
+
+    # Proxy /api requests to the backend service
+    handle /api/* {
+        reverse_proxy backend:8000
+    }
+
+    # Proxy health check
+    handle /health {
+        reverse_proxy backend:8000
+    }
+
+    # Redirect all other traffic to the Frontend on DigitalOcean Spaces
+    handle {
+        redir https://ui.tech00000.online{uri} permanent
+    }
+
+    # Logging
+    log {
+        output file /var/log/caddy/access.log
+        format json
+    }
+}

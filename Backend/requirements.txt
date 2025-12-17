@@ -1,0 +1,18 @@
+# =============================================================================
+# Python Dependencies
+# =============================================================================
+# Production dependencies for the FastAPI backend application
+# =============================================================================
+
+# FastAPI: Modern, fast web framework for building APIs
+fastapi==0.104.1
+
+# Uvicorn: ASGI server for running FastAPI
+uvicorn[standard]==0.24.0
+
+# Optional: Additional dependencies you might need
+# python-multipart==0.0.6  # For file uploads
+# python-jose[cryptography]==3.3.0  # For JWT authentication
+# passlib[bcrypt]==1.7.4  # For password hashing
+# sqlalchemy==2.0.23  # For database ORM
+# pydantic-settings==2.1.0  # For settings management
